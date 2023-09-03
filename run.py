@@ -16,6 +16,7 @@ config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
 sess=tf.compat.v1.Session(config=config)
 set_session(sess)
+import pandas as pd
 
 class RetinaFace(object):
     
@@ -127,7 +128,46 @@ class RetinaFace(object):
             return crops, crops_flips
         else:
             return crops
-    
+        
+
+def predict_songs(mood):
+
+    mood_music = pd.read_csv("data_moods.csv")
+    mood_music = mood_music[['name','artist','mood']]
+
+    if(mood==0 or mood==1 or mood==2 ):
+        #for angery,disgust,fear
+        filter1=mood_music['mood']=='Calm'
+        f1=mood_music.where(filter1)
+        f1=f1.dropna()
+        f2 =f1.sample(n=5)
+        f2.reset_index(inplace=True)
+        print(f2.head())
+    if(mood==3 or mood==4):
+        #for happy, neutral
+        filter1=mood_music['mood']=='Happy'
+        f1=mood_music.where(filter1)
+        f1=f1.dropna()
+        f2 =f1.sample(n=5)
+        f2.reset_index(inplace=True)
+        print(f2.head())
+    if(mood==5):
+        #for Sad
+        filter1=mood_music['mood']=='Sad'
+        f1=mood_music.where(filter1)
+        f1=f1.dropna()
+        f2 =f1.sample(n=5)
+        f2.reset_index(inplace=True)
+        print(f2.head())
+    if(mood==6):
+        #for surprise
+        filter1=mood_music['mood']=='Energetic'
+        f1=mood_music.where(filter1)
+        f1=f1.dropna()
+        f2 =f1.sample(n=5)
+        f2.reset_index(inplace=True)
+        print(f2.head())
+        
     
 if __name__ == "__main__":
 
@@ -138,6 +178,11 @@ if __name__ == "__main__":
     idx_to_class={0: 'Anger', 1: 'Disgust', 2: 'Fear', 3: 'Happiness', 4: 'Neutral', 5: 'Sadness', 6: 'Surprise'}
 
     model = load_model('./mobilenet_7.h5')
+
+    start = time.time()
+
+    emotions = list()
+    emotion_placeholder = "analysing"
 
     while(cap.isOpened()):
         ret, img = cap.read()
@@ -156,10 +201,21 @@ if __name__ == "__main__":
             
             scores = model.predict(inp)[0]
             label = idx_to_class[np.argmax(scores)]
-            cv2.rectangle(img, (x1, y1), (x1 + (len(label)) * 15, 
-                            y1 - 20) , (0,255,0), -1, cv2.LINE_AA)
-            cv2.putText(img, label , (x1, y1), 
-                        cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 0, 0), 1, cv2.LINE_AA)
+            emotions.append(np.argmax(scores))
+
+        cv2.rectangle(img, (x1, y1), (x1 + (len(emotion_placeholder)) * 15, 
+                        y1 - 20) , (0,255,0), -1, cv2.LINE_AA)
+        cv2.putText(img, emotion_placeholder , (x1, y1), 
+                    cv2.FONT_HERSHEY_COMPLEX, 0.6, (0, 0, 0), 1, cv2.LINE_AA)
+            
+        end = time.time()
+        # every 10 seconds
+        if int(end - start) > 10:
+            pred_emotion = max(emotions)
+            emotions = list()
+            start = end
+            emotion_placeholder =  idx_to_class[pred_emotion]
+            predict_songs(pred_emotion)
 
         cv2.namedWindow("Result", cv2.WINDOW_NORMAL)
         cv2.imshow("Result", img)
